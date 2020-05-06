@@ -1,0 +1,73 @@
+ID: ui5Websockets
+_schema-version: 3.2.0
+description: Enter description here
+version: 0.0.1
+parameters:
+  enable-parallel-deployments: true
+
+modules:
+  - name: ui5Websockets
+    type: nodejs
+    path: approuter
+    parameters:
+      disk-quota: 512M
+      memory: 512M
+    requires:
+      - name: ui5Websockets_destination
+      - name: ui5Websockets_uaa
+      - name: ui5Websockets_html5_repo_runtime
+      - name: NodeWsEm_api
+        group: destinations
+        properties:
+          forwardAuthToken: true
+          name: NodeWsEm_api
+          strictSSL: false
+          url: "~{url}"
+  - name: ui5Websockets_deployer
+    type: com.sap.html5.application-content
+    path: deployer
+    requires:
+      - name: ui5Websockets_html5_repo_host
+    build-parameters:
+      builder: custom
+      commands:
+        - npm run build:ui --prefix ..
+  - name: NodeWsEm
+    type: nodejs
+    path: NodeWsEm
+    provides:
+      - name: NodeWsEm_api
+        properties:
+          url: ${default-url}
+    requires:
+      - name: EnterpriseMessaging
+
+resources:
+  - name: ui5Websockets_destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-plan: lite
+      service: destination
+  - name: ui5Websockets_uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      path: ./xs-security.json
+      service-plan: application
+      service: xsuaa
+  - name: ui5Websockets_html5_repo_runtime
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-plan: app-runtime
+      service: html5-apps-repo
+  - name: ui5Websockets_html5_repo_host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service-plan: app-host
+      service: html5-apps-repo
+      config:
+        sizeLimit: 5
+  - name: EnterpriseMessaging
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service: enterprise-messaging
+      service-plan: dev
